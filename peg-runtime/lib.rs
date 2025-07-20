@@ -1,6 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(feature = "unstable", feature(error_in_core))]
+#![feature(try_trait_v2)]
 
+use core::{convert::Infallible, ops::{ControlFlow, FromResidual, Try}};
 use std::fmt::Display;
 
 pub mod error;
@@ -20,6 +22,28 @@ pub enum RuleResult<T> {
 
     /// Failure (furthest failure location is not yet known)
     Failed,
+}
+
+impl<T> FromResidual<RuleResult<Infallible>> for RuleResult<T> {
+    fn from_residual(residual: RuleResult<Infallible>) -> Self {
+        match residual {
+            RuleResult::Failed => RuleResult::Failed,
+        }
+    }
+}
+
+impl<T> Try for RuleResult<T> {
+    type Output = (usize, T);
+    type Residual = RuleResult<Infallible>;
+    fn from_output(output: Self::Output) -> Self {
+        RuleResult::Matched(output.0, output.1)
+    }
+    fn branch(self) -> ControlFlow<Self::Residual, Self::Output> {
+        match self {
+            RuleResult::Matched(pos, value) => ControlFlow::Continue((pos, value)),
+            RuleResult::Failed => ControlFlow::Break(RuleResult::Failed),
+        }
+    }
 }
 
 /// A type that can be used as input to a parser.

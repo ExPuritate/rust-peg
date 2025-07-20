@@ -4,6 +4,9 @@
 
 `rust-peg` is a simple yet flexible parser generator that makes it easy to write robust parsers. Based on the [Parsing Expression Grammar](https://en.wikipedia.org/wiki/Parsing_expression_grammar) formalism, it provides a Rust macro that builds a recursive descent parser from a concise definition of the grammar.
 
+# Notes
+It CANNOT be compiled in stable compilers
+
 ## Features
 
 * Parse input from `&str`, `&[u8]`, `&[T]` or custom types implementing traits
