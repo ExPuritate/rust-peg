@@ -45,6 +45,7 @@ pub struct Rule {
     pub visibility: Option<TokenStream>,
     pub cache: Option<Cache>,
     pub no_eof: bool,
+    pub should_trace: bool,
 }
 
 #[derive(Debug)]
