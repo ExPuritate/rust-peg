@@ -1,3 +1,5 @@
+#![feature(impl_trait_in_bindings)]
+
 use std::fmt::Debug;
 
 // `--features trace` code names the return type, so doesn't work with `impl Trait`
