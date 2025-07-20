@@ -954,7 +954,7 @@ fn compile_expr(context: &Context, e: &SpannedExpr, result_used: bool) -> TokenS
                 }
             }
 
-            let (enter, leave) = if cfg!(feature = "trace") {
+            let (enter, leave) = if cfg!(any(feature = "trace", test)) {
                 (
                     quote_spanned! {span => println!("[PEG_TRACE] Entering level {}", min_prec);},
                     quote_spanned! {span => println!("[PEG_TRACE] Leaving level {}", min_prec);},
