@@ -169,15 +169,17 @@ fn make_parse_state(grammar: &Grammar) -> TokenStream {
         }
     }
 
+    let vis = &grammar.visibility;
+
     quote_spanned! { span =>
         #[allow(unused_parens)]
-        struct ParseState<'input #(, #grammar_lifetime_params)*> {
+        #vis struct ParseState<'input #(, #grammar_lifetime_params)*> {
             _phantom: ::core::marker::PhantomData<(&'input () #(, &#grammar_lifetime_params ())*)>,
             #(#cache_fields_def),*
         }
 
         impl<'input #(, #grammar_lifetime_params)*> ParseState<'input #(, #grammar_lifetime_params)*> {
-            fn new() -> ParseState<'input #(, #grammar_lifetime_params)*> {
+            #vis fn new() -> ParseState<'input #(, #grammar_lifetime_params)*> {
                 ParseState {
                     _phantom: ::core::marker::PhantomData,
                     #(#cache_fields: ::std::collections::HashMap::new()),*
@@ -233,7 +235,7 @@ fn compile_rule(context: &Context, rule: &Rule) -> TokenStream {
 
     let body = compile_expr(&context, &rule.expr, rule.ret_type.is_some());
 
-    let wrapped_body = if cfg!(feature = "trace") {
+    let wrapped_body = if cfg!(any(feature = "trace", test)) {
         let str_rule_name = rule.name.to_string();
         quote_spanned! { span => {
             let loc = ::peg::Parse::position_repr(__input, __pos);
@@ -262,7 +264,7 @@ fn compile_rule(context: &Context, rule: &Rule) -> TokenStream {
         Some(cache_type) => {
             let cache_field = format_ident!("{}_cache", rule.name);
 
-            let cache_trace = if cfg!(feature = "trace") {
+            let cache_trace = if cfg!(any(feature = "trace", test)) {
                 let str_rule_name = rule.name.to_string();
                 quote_spanned! { span =>
                     let loc = ::peg::Parse::position_repr(__input, __pos);
@@ -320,8 +322,10 @@ fn compile_rule(context: &Context, rule: &Rule) -> TokenStream {
         }
     };
 
+    let vis = rule.visibility.clone();
+
     quote_spanned! { span =>
-        fn #name<'input #(, #grammar_lifetime_params)* #(, #ty_params)*>(
+        #vis fn #name<'input #(, #grammar_lifetime_params)* #(, #ty_params)*>(
             __input: #input_ty,
             __state: #parse_state_ty,
             __err_state: &mut ::peg::error::ErrorState,
@@ -950,7 +954,7 @@ fn compile_expr(context: &Context, e: &SpannedExpr, result_used: bool) -> TokenS
                 }
             }
 
-            let (enter, leave) = if cfg!(feature = "trace") {
+            let (enter, leave) = if cfg!(any(feature = "trace", test)) {
                 (
                     quote_spanned! {span => println!("[PEG_TRACE] Entering level {}", min_prec);},
                     quote_spanned! {span => println!("[PEG_TRACE] Leaving level {}", min_prec);},
