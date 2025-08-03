@@ -18,7 +18,7 @@ pub struct ExpectedSet {
 impl ExpectedSet {
     /// Iterator of expected literals
     pub fn tokens<'a>(&'a self) -> impl Iterator<Item = &'static str> + 'a {
-        self.expected.iter().map(|x| *x)
+        self.expected.iter().copied()
     }
 }
 
@@ -35,7 +35,7 @@ impl Display for ExpectedSet {
 
             write!(fmt, "one of {}", iter.next().unwrap())?;
             for elem in iter {
-                write!(fmt, ", {}", elem)?;
+                write!(fmt, ", {elem}")?;
             }
         }
 

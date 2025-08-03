@@ -1,8 +1,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(feature = "unstable", feature(error_in_core))]
+#![allow(internal_features)]
 #![feature(try_trait_v2)]
+#![feature(panic_internals)]
+#![feature(cold_path)]
+#![feature(rustc_allow_const_fn_unstable)]
+#![feature(const_precise_live_drops)]
+#![feature(const_trait_impl)]
+#![feature(const_destruct)]
 
-use core::{convert::Infallible, ops::{ControlFlow, FromResidual, Try}};
+use core::{
+    convert::Infallible,
+    hint::cold_path,
+    marker::Destruct,
+    ops::{ControlFlow, FromResidual, Try},
+    panicking::panic,
+    pin::Pin,
+};
 use std::fmt::Display;
 
 pub mod error;
@@ -42,6 +56,86 @@ impl<T> Try for RuleResult<T> {
         match self {
             RuleResult::Matched(pos, value) => ControlFlow::Continue((pos, value)),
             RuleResult::Failed => ControlFlow::Break(RuleResult::Failed),
+        }
+    }
+}
+
+impl<T> RuleResult<T> {
+    pub const fn is_matched(&self) -> bool {
+        matches!(*self, RuleResult::Matched(_, _))
+    }
+
+    pub const fn is_matched_and<F>(self, f: F) -> bool
+    where
+        F: [const] FnOnce(usize, T) -> bool + [const] Destruct,
+    {
+        match self {
+            Self::Failed => false,
+            Self::Matched(pos, val) => f(pos, val),
+        }
+    }
+
+    pub const fn is_failed(&self) -> bool {
+        !self.is_matched()
+    }
+
+    pub const fn is_failed_or<F>(self, f: F) -> bool
+    where
+        F: [const] FnOnce(usize, T) -> bool + [const] Destruct,
+    {
+        match self {
+            Self::Failed => true,
+            Self::Matched(pos, val) => f(pos, val),
+        }
+    }
+
+    pub const fn as_ref(&self) -> RuleResult<&T> {
+        match *self {
+            Self::Failed => RuleResult::Failed,
+            Self::Matched(pos, ref val) => RuleResult::Matched(pos, val),
+        }
+    }
+
+    pub const fn as_mut(&mut self) -> RuleResult<&mut T> {
+        match *self {
+            Self::Failed => RuleResult::Failed,
+            Self::Matched(pos, ref mut val) => RuleResult::Matched(pos, val),
+        }
+    }
+
+    pub const fn unwrap(self) -> (usize, T) {
+        match self {
+            Self::Matched(pos, val) => (pos, val),
+            Self::Failed => panic("called `RuleResult::unwrap()` on a `Failed` value"),
+        }
+    }
+
+    /// # Safety
+    ///
+    /// Calling this method on [`Failed`] is *[undefined behavior]*.
+    ///
+    /// [undefined behavior]: https://doc.rust-lang.org/reference/behavior-considered-undefined.html
+    ///
+    pub const unsafe fn unwrap_unchecked(self) -> (usize, T) {
+        match self {
+            Self::Matched(pos, val) => (pos, val),
+            Self::Failed => {
+                cold_path();
+                unsafe { core::hint::unreachable_unchecked() }
+            }
+        }
+    }
+
+    pub const fn map<U, F>(self, f: F) -> RuleResult<U>
+    where
+        F: [const] FnOnce(usize, T) -> (usize, U) + [const] Destruct,
+    {
+        match self {
+            Self::Matched(pos, val) => {
+                let (pos, val) = f(pos, val);
+                RuleResult::Matched(pos, val)
+            }
+            Self::Failed => RuleResult::Failed,
         }
     }
 }
@@ -88,6 +182,10 @@ extern crate core as std;
 // needed for type inference on the `#{|input, pos| ..}` closure, since there
 // are different type inference rules on closures in function args.
 #[doc(hidden)]
-pub fn call_custom_closure<I, T>(f: impl FnOnce(I, usize) -> RuleResult<T>, input: I, pos: usize) -> RuleResult<T> {
+pub fn call_custom_closure<I, T>(
+    f: impl FnOnce(I, usize) -> RuleResult<T>,
+    input: I,
+    pos: usize,
+) -> RuleResult<T> {
     f(input, pos)
 }
