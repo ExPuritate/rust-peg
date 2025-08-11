@@ -30,7 +30,7 @@ fn extra_args_def(grammar: &Grammar) -> TokenStream {
     let args: Vec<TokenStream> = grammar
         .args
         .iter()
-        .map(|&(ref name, ref tp)| quote!(, #name: #tp))
+        .map(|(ref name, ref tp)| quote!(, #name: #tp))
         .collect();
     quote!(#(#args)*)
 }
@@ -39,7 +39,7 @@ fn extra_args_call(grammar: &Grammar) -> TokenStream {
     let args: Vec<TokenStream> = grammar
         .args
         .iter()
-        .map(|&(ref name, _)| quote!(, #name))
+        .map(|(ref name, _)| quote!(, #name))
         .collect();
     quote!(#(#args)*)
 }
@@ -569,7 +569,7 @@ fn compile_expr(context: &Context, e: &SpannedExpr, result_used: bool) -> TokenS
             if generics.is_some() {
                 return report_error_expr(
                     rule_name.span(),
-                    "rule closure cannot have generics".to_string()
+                    "rule closure cannot have generics".to_string(),
                 );
             }
 
@@ -584,14 +584,13 @@ fn compile_expr(context: &Context, e: &SpannedExpr, result_used: bool) -> TokenS
             } else {
                 return report_error_expr(
                     rule_name.span(),
-                    format!("undefined rule `{}`", rule_name_str),
+                    format!("undefined rule `{rule_name_str}`"),
                 );
             };
 
             if result_used && rule_def.ret_type.is_none() {
                 let msg = format!(
-                    "using result of rule `{}`, which does not return a value",
-                    rule_name_str
+                    "using result of rule `{rule_name_str}`, which does not return a value"
                 );
                 return report_error_expr(rule_name.span(), msg);
             }

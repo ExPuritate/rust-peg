@@ -18,6 +18,12 @@ mod translate;
 /// The main macro for creating a PEG parser.
 ///
 /// For the grammar syntax, see the `peg` crate documentation.
+///
+/// # Example for Autocomplete, it is UNREAL
+///
+/// ```rust,ignore
+/// peg::parser! {}
+/// ```
 #[proc_macro]
 pub fn parser(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let tokens = tokens::FlatTokenStream::new(input.into());

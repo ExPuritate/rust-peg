@@ -138,6 +138,16 @@ impl<T> RuleResult<T> {
             Self::Failed => RuleResult::Failed,
         }
     }
+
+    pub const fn and_then<U, F>(self, f: F) -> RuleResult<U>
+    where
+        F: [const] FnOnce(usize, T) -> RuleResult<U> + [const] Destruct,
+    {
+        match self {
+            Self::Matched(pos, val) => f(pos, val),
+            Self::Failed => RuleResult::Failed,
+        }
+    }
 }
 
 /// A type that can be used as input to a parser.
