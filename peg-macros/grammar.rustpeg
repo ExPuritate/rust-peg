@@ -4,7 +4,6 @@ use crate::ast::*;
 use crate::ast::Expr::*;
 use crate::tokens::FlatTokenStream;
 use crate::translate::report_error_expr;
-use crate::translate::report_error_expr;
 use proc_macro2::{ TokenStream, Ident, Group, Literal, Delimiter, Span };
 
 pub rule peg_grammar() -> Grammar
